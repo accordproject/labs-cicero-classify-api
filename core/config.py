@@ -44,6 +44,7 @@ NER_TRAIN_BATCH_SIZE = 256
 NER_TRAIN_DEFAULT_FILTER = {}
 NER_TRAIN_DEVIDE_ID = 0
 NER_ADAPTERS_PATH = "."
+DUMMY_LABEL_NAME = "DUMMY;" # ";" can't be the real label name, no conflict
 
 # Anaconda
 ANACONDA_ENV_NAME = "adapter"

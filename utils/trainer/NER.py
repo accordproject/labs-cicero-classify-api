@@ -2,7 +2,7 @@ import pandas as pd
 import pymongo
 import numpy as np
 
-from core.config import MONGODB_URL,DATABASE_NAME, NER_LABEL_COLLECTION, LABEL_COLLECTION, LABEL_TRAIN_JOB_COLLECTION, CONFIG_COLLECTION, NER_TRAINER_DATA_CATCH_FILE, NER_ADAPTERS_TRAINER_NAME
+from core.config import MONGODB_URL,DATABASE_NAME, NER_LABEL_COLLECTION, LABEL_COLLECTION, LABEL_TRAIN_JOB_COLLECTION, CONFIG_COLLECTION, NER_TRAINER_DATA_CATCH_FILE, NER_ADAPTERS_TRAINER_NAME, DUMMY_LABEL_NAME
 
 from torch.utils.data import Dataset
 import torch
@@ -15,6 +15,8 @@ from tqdm import tqdm
 
 import swifter
 import os
+
+
 
 client = pymongo.MongoClient(MONGODB_URL)
 def get_training_dataframe(train_data_search_filter = {}, cache = True):
@@ -101,7 +103,7 @@ def get_training_data_by_df_according_to_label_name(df, label_name):
         if set(label).intersection(set(wanted_label)):
             return label_name
         else:
-            return "O"
+            return DUMMY_LABEL_NAME
 
     df[label_name] = list(df["labels"].apply(label_data))
 
@@ -113,14 +115,14 @@ class NER_Dataset_for_Adapter(Dataset):
     def __init__(self, tokenizer, df, label_name):
         self.label_name = label_name
         self.mode = "train"
-        # 大數據你會需要用 iterator=True
+        
         self.sentences, self.tags = get_training_data_by_df_according_to_label_name(df, label_name)
         self.len = len(self.sentences)
 
-        labels = ["O", label_name]
+        labels = [DUMMY_LABEL_NAME, label_name]
 
         if self.mode != "test":
-            labels = ["O", label_name]
+            labels = [DUMMY_LABEL_NAME, label_name]
             self.label_map = {}
             for i, label in enumerate(labels):
                 self.label_map[label] = i
@@ -132,13 +134,13 @@ class NER_Dataset_for_Adapter(Dataset):
             self.label_map = None
 
         self.tokenizer = tokenizer  # RoBERTa tokenizer
-        self.O_label = self.label_map["O"]
+        self.O_label = self.label_map[DUMMY_LABEL_NAME]
 
     def __getitem__(self, idx):
         if self.mode == "test":
             label_tensor = None
         else:
-            label = ["O"] + self.tags[idx] + ["O"]
+            label = [DUMMY_LABEL_NAME] + self.tags[idx] + [DUMMY_LABEL_NAME]
 
             label = np.array(label)
             label = label.reshape(-1,1)
@@ -146,7 +148,7 @@ class NER_Dataset_for_Adapter(Dataset):
             label = np.apply_along_axis(self.split_one_hot_multiTags, 1, label)
             label_tensor = torch.tensor(label, dtype = torch.float32)
 
-        # 建立第一個句子的 BERT tokens 並加入分隔符號 [SEP]
+        # Add [CLS] and [SEP]
         word_pieces = [self.tokenizer.cls_token]
         word_pieces += self.sentences[idx]
         word_pieces += [self.tokenizer.sep_token]
@@ -154,7 +156,6 @@ class NER_Dataset_for_Adapter(Dataset):
         ids = self.tokenizer.convert_tokens_to_ids(word_pieces)
         tokens_tensor = torch.tensor(ids)
 
-        # 將第一句包含 [SEP] 的 token 位置設為 0
         segments_tensor = torch.zeros_like(tokens_tensor)
 
         return (tokens_tensor, segments_tensor, label_tensor)
