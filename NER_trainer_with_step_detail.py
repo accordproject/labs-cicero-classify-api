@@ -297,7 +297,7 @@ try:
              "$push": {"adapter.history": {
                     "filename": f"{label_name}_epoch_{Epoch_Times}_{dateStamp}",
                     "time": now_time,
-                    "trainer_job_id": now_is_training["_id"],
+                    "trainer_job_id": str(now_is_training["_id"]),
                 }}})
 except KeyboardInterrupt:
     sys.exit(1)

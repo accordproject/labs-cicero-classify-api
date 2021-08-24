@@ -47,7 +47,6 @@ async def define_new_label(response: Response, data: create_new_label_body):
     result = col.find({"label_name": data.label_name})
     result = await result.to_list(None)
     if len(result) != 0:
-        print(f"Already have {data.label_name}")
         result[0]["id"] = str(result[0]["_id"])
         del result[0]["_id"]
         return {
