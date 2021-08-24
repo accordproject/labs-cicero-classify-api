@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Response
 
 from typing import Optional
 
@@ -20,11 +20,12 @@ class classify_template_body(BaseModel):
     text = model.example_text
 
 
-@router.post("/models/classify/template", tags = TAG_OF_TEMPLATE_CLASSIFY_API, status_code=status.HTTP_200_OK)
-def classify_template(data: classify_template_body):
+@router.post("/models/classify/template", tags = TAG_OF_TEMPLATE_CLASSIFY_API)
+def classify_template(response: Response, data: classify_template_body):
     predictions = model.classify(data.text)
     if data.return_max_size > 0:
         predictions = predictions[:data.return_max_size]
+    response.status_code = status.HTTP_200_OK
     return {
         "message": "get success",
         "prediction": predictions
@@ -32,8 +33,9 @@ def classify_template(data: classify_template_body):
 
 
 
-@router.get("/models/classify/template", tags = TAG_OF_TEMPLATE_CLASSIFY_API, status_code=status.HTTP_200_OK)
-def get_model_status():
+@router.get("/models/classify/template", tags = TAG_OF_TEMPLATE_CLASSIFY_API)
+def get_classify_model_status(response: Response):
+    response.status_code = status.HTTP_200_OK
     return {
         "message": "get success",
         "status": "online"
