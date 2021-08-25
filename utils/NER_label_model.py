@@ -32,18 +32,12 @@ with mute_logging():
     )
 
 import os
+import re
 
 # This is a asyncio status, but just use mongo client directly to save develop time
 from pymongo import MongoClient
-from core.config import MONGODB_URL, DATABASE_NAME, LABEL_COLLECTION, NER_ADAPTERS_PATH
-mongo_client = MongoClient(MONGODB_URL)
-labels_col = mongo_client[DATABASE_NAME][LABEL_COLLECTION]
+from core.config import MONGODB_URL, DATABASE_NAME, LABEL_COLLECTION, NER_ADAPTERS_PATH, PREDICT_DEVICE
 
-labels = labels_col.find()
-
-labels = list(labels)
-
-all_adapters = []
 
 def check_adapter_filename_valid(filename):
     if (os.path.isdir(f"{NER_ADAPTERS_PATH}/save_adapters/{filename}") and
@@ -52,52 +46,81 @@ def check_adapter_filename_valid(filename):
     else:
         return False
 
-for label in labels:
-    if label["adapter"]["lastest_filename"]:
-        filename = label["adapter"]["lastest_filename"]
-        if check_adapter_filename_valid(filename) == False:
-            while len(label["adapter"]["history"]) > 0:
-                hisotry_adapter = label["adapter"]["history"].pop(0)
-                filename = hisotry_adapter["filename"]
-                if check_adapter_filename_valid(filename):
-                    print(f"""Label {label["label_name"]} will use a history one "{filename}" because current one unavailable.""")
-                    break
-        all_adapters.append(filename)
-#adapter_name_in_dir = os.listdir("./save_adapters/")
-all_adapter_name = []
-with mute_logging():
-    for adapter_name in all_adapters:
-        name = model.load_adapter(f"{NER_ADAPTERS_PATH}/save_adapters/{adapter_name}")
-        all_adapter_name.append(name)
-        model.load_head(f"{NER_ADAPTERS_PATH}/save_heads/{adapter_name}")
+mongo_client = MongoClient(MONGODB_URL)
+labels_col = mongo_client[DATABASE_NAME][LABEL_COLLECTION]
 
-import re
+def get_label_adapter_filenames():
+    all_adapters = {}
+    labels = labels_col.find()
+    labels = list(labels)
+    for label in labels:
+        if label["adapter"]["lastest_filename"]:
+            filename = label["adapter"]["lastest_filename"]
+            if check_adapter_filename_valid(filename) == False:
+                while len(label["adapter"]["history"]) > 0:
+                    hisotry_adapter = label["adapter"]["history"].pop(0)
+                    filename = hisotry_adapter["filename"]
+                    if check_adapter_filename_valid(filename):
+                        print(f"""Label {label["label_name"]} will use a history one "{filename}" because current one unavailable.""")
+                        break
+            all_adapters[label["label_name"]] = filename
+    return all_adapters
 
-parallel_text = "','".join(all_adapter_name)
-result = re.findall(r'[;|(|)]',parallel_text)
-if len(result) != 0:
-    raise(ValueError("Adapter Name must not contain \"" + '\", \"'.join(result) + '"'))
+global_adapters_filenames = get_label_adapter_filenames()
+global_adapters_filenames = list(global_adapters_filenames.values())
+
+def load_adapters(adapters_filenames):
+    global model
+    all_adapter_name = []
+    with mute_logging():
+        for adapter_filename in adapters_filenames:
+            name = model.load_adapter(f"{NER_ADAPTERS_PATH}/save_adapters/{adapter_filename}")
+            all_adapter_name.append(name)
+            model.load_head(f"{NER_ADAPTERS_PATH}/save_heads/{adapter_filename}")
+    return all_adapter_name
+global_all_adapter_names = load_adapters(global_adapters_filenames)
+
 
 from transformers.adapters.composition import Parallel
-parallel = eval("Parallel('" + "','".join(all_adapter_name) + "')")
 
-model.set_active_adapters(parallel)
+def update_model_active_head(adapter_names):
+    global model
+    parallel = Parallel(*adapter_names)
+    model.set_active_adapters(parallel)
 
-device = "cpu"
-
-def get_adapter_mapping(model):
-    print(model.active_head)
-    label_2_id_mapping = dict()
-    id_2_label_mapping = dict()
-    for i, head in enumerate(model.active_head):
-        label_2_id_mapping[head] = i
-        id_2_label_mapping[i] = head
-    return label_2_id_mapping, id_2_label_mapping
+update_model_active_head(global_all_adapter_names)
 
 
+# def get_adapter_mapping(model):
+#     print(model.active_head)
+#     label_2_id_mapping = dict()
+#     id_2_label_mapping = dict()
+#     for i, head in enumerate(model.active_head):
+#         label_2_id_mapping[head] = i
+#         id_2_label_mapping[i] = head
+#     return label_2_id_mapping, id_2_label_mapping
 
-def model_predict(model, sentence, device = "cpu"):
-    # Check if there is update, if yes, then reload the model.
+def check_and_update_new_adapter():
+    """If there is difference, then update."""
+    global global_adapters_filenames
+    global global_all_adapter_names
+    update = get_label_adapter_filenames()
+    current_filenames = set(update.values())
+    current_available_adapters_name = set(update.keys())
+
+    new_filenames = current_filenames.difference(set(global_adapters_filenames))
+    removed_filenames = set(global_adapters_filenames).difference(current_filenames)
+
+    if new_filenames or removed_filenames:
+        new_adapter_names = load_adapters(new_filenames)
+        global_all_adapter_names = current_available_adapters_name
+        global_adapters_filenames = list(
+            set(global_adapters_filenames).union(new_filenames).difference(removed_filenames)
+            )
+        update_model_active_head(global_all_adapter_names)
+
+def predict(sentence, device = PREDICT_DEVICE):
+    global model
     tokenized_sentence = torch.tensor([tokenizer.encode(sentence)])
     pos = torch.tensor([[0] * len(tokenized_sentence)])
     tags = torch.tensor([[1] * len(tokenized_sentence)])

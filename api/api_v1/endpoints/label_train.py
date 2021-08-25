@@ -1,5 +1,6 @@
 from inspect import trace
-from fastapi import APIRouter, Depends, status, Response
+from fastapi import APIRouter, Depends, Response
+from fastapi import status as status_code
 
 from typing import Optional
 
@@ -27,7 +28,7 @@ class train_specific_NER_label_body(BaseModel):
     train_data_filter: Any = {}
     
 
-@router.post("/model/NER/labelText/jobs", tags = ["NER Label Retrain"], status_code=status.HTTP_202_ACCEPTED)
+@router.post("/model/NER/labelText/jobs", tags = ["NER Label Retrain"], status_code=status_code.HTTP_202_ACCEPTED)
 async def train_specific_NER_label(body: train_specific_NER_label_body, response: Response):
     """Train Certain label with existing data."""
 
@@ -37,7 +38,7 @@ async def train_specific_NER_label(body: train_specific_NER_label_body, response
 
     label = await label_define_col.find_one({"label_name": body.label_name})
     if label == None:
-        response.status_code = status.HTTP_404_NOT_FOUND
+        response.status_code = status_code.HTTP_404_NOT_FOUND
         return {
             "message": "Failed, Can't find this label name"
         }
@@ -57,13 +58,13 @@ async def train_specific_NER_label(body: train_specific_NER_label_body, response
     }
     try:
         result = await label_queue_col.insert_one(dataToStore)
-        response.status_code = status.HTTP_202_ACCEPTED
+        response.status_code = status_code.HTTP_202_ACCEPTED
         return {
             "message": f"Success, {body.label_name} now is in Training Queue.",
             "trace_id": str(result.inserted_id),
         }
     except Exception as e:
-        response.status_code = status.HTTP_406_NOT_ACCEPTABLE
+        response.status_code = status_code.HTTP_406_NOT_ACCEPTABLE
         return {
             "message": f"Fail, please check the Error Message",
             "error_msg": str(e)
@@ -79,7 +80,7 @@ async def track_specific_NER_label_training_status(trace_id: str, response: Resp
     trace_id = ObjectId(trace_id)
     train_status = await label_queue_col.find_one({"_id": trace_id},
     {"_id": False})
-    response.status_code = status.HTTP_200_OK
+    response.status_code = status_code.HTTP_200_OK
     return train_status
     
 from bson.objectid import ObjectId
@@ -90,10 +91,10 @@ async def track_specific_NER_label_training_status(trace_id: str, response: Resp
     trace_id = ObjectId(trace_id)
     result = await label_queue_col.delete_one({"_id": trace_id})
     if result.deleted_count == 1:
-        response.status_code = status.HTTP_204_NO_CONTENT
+        response.status_code = status_code.HTTP_204_NO_CONTENT
         return {}
     else:
-        response.status_code = status.HTTP_304_NOT_MODIFIED
+        response.status_code = status_code.HTTP_304_NOT_MODIFIED
         return {}
 
 @router.get("/model/NER/labelText/jobs", tags = ["NER Label Retrain"])
@@ -101,7 +102,7 @@ async def track_all_NER_label_training_status(response: Response, status: str = 
     """# Get NER Label Training Status by train_status\ntrain_status = ["training", "waiting", "done", "all"]"""
     status_options = ["training", "waiting", "done", "all"]
     if status not in status_options:
-        response.status_code = status.HTTP_405_METHOD_NOT_ALLOWED
+        response.status_code = status_code.HTTP_405_METHOD_NOT_ALLOWED
         return {
             "message": f"status must be in one of the {status_options}, EX: '/model/NER/labelText/jobs?status=all'."
         }
@@ -122,13 +123,13 @@ async def track_all_NER_label_training_status(response: Response, status: str = 
 
     all_train_status = list(
         map(replace_mongo_id_to_trace_id, all_train_status))
-    response.status_code = status.HTTP_200_OK
+    response.status_code = status_code.HTTP_200_OK
     return all_train_status
 
 @router.post("/model/NER/labelText/restartTrainer", tags = ["NER Label Retrain"])
 async def restart_label_trainer_now(response: Response):
     await set_trainer_restart_required(True)
-    response.status_code = status.HTTP_202_ACCEPTED
+    response.status_code = status_code.HTTP_202_ACCEPTED
     return {
         "message": "Trainer will restart now."
     }
