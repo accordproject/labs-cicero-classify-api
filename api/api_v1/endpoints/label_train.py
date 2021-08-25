@@ -92,7 +92,7 @@ async def track_specific_NER_label_training_status(trace_id: str, response: Resp
     result = await label_queue_col.delete_one({"_id": trace_id})
     if result.deleted_count == 1:
         response.status_code = status_code.HTTP_204_NO_CONTENT
-        return {}
+        return response
     else:
         response.status_code = status_code.HTTP_304_NOT_MODIFIED
         return {}

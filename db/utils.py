@@ -1,4 +1,3 @@
 def convert_mongo_id(data):
-    data["id"] = str(data["_id"])
-    del data["_id"]
+    data["_id"] = str(data["_id"])
     return data
