@@ -35,7 +35,7 @@ if os.path.isdir(f"{NER_ADAPTERS_PATH}/save_adapters") == False:
 if os.path.isdir(f"{NER_ADAPTERS_PATH}/save_heads") == False:
     os.mkdir(f"{NER_ADAPTERS_PATH}/save_heads")
 
-dateStamp = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S%z")
+
 
 device = torch.device(f"cuda:{NER_TRAIN_DEVIDE_ID}" if torch.cuda.is_available() else "cpu")
 
@@ -160,6 +160,7 @@ def main():
         tokenizer = RobertaTokenizer.from_pretrained("roberta-base")
 
         while True:
+            dateStamp = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S%z")
             training_queue = training_job_col.find({
                 "status":  re.compile("(training|waiting)")
             }, {"logs": False})
