@@ -1,9 +1,12 @@
 import pandas as pd
 import numpy as np
-import torch
-print(f"Torch Version: {torch.__version__}")
 
+import torch
 import transformers
+# When Development
+# Torch Version: 1.8.2+cu111
+# Transformers (Adapter) Version: 2.0.1
+print(f"Torch Version: {torch.__version__}")
 print(f"Transformers (Adapter) Version: {transformers.__version__}")
 
 print(f"Loading adapter model...")
@@ -58,7 +61,7 @@ def get_label_adapter_filenames():
             filename = label["adapter"]["lastest_filename"]
             if check_adapter_filename_valid(filename) == False:
                 while len(label["adapter"]["history"]) > 0:
-                    hisotry_adapter = label["adapter"]["history"].pop(0)
+                    hisotry_adapter = label["adapter"]["history"].pop(-1)
                     filename = hisotry_adapter["filename"]
                     if check_adapter_filename_valid(filename):
                         print(f"""Label {label["label_name"]} will use a history one "{filename}" because current one unavailable.""")
@@ -67,7 +70,7 @@ def get_label_adapter_filenames():
     return all_adapters
 
 global_adapters_filenames = get_label_adapter_filenames()
-global_adapters_filenames = list(global_adapters_filenames.values())
+
 
 def load_adapters(adapters_filenames):
     global model
@@ -78,12 +81,12 @@ def load_adapters(adapters_filenames):
             all_adapter_name.append(name)
             model.load_head(f"{NER_ADAPTERS_PATH}/save_heads/{adapter_filename}")
     return all_adapter_name
-global_all_adapter_names = load_adapters(global_adapters_filenames)
+global_all_adapter_names = load_adapters(global_adapters_filenames.values())
 
 
 from transformers.adapters.composition import Parallel
 
-def update_model_active_head(adapter_names):
+def update_model_active_head(adapter_names = global_all_adapter_names):
     global model
     parallel = Parallel(*adapter_names)
     model.set_active_adapters(parallel)
@@ -91,33 +94,47 @@ def update_model_active_head(adapter_names):
 update_model_active_head(global_all_adapter_names)
 
 
-# def get_adapter_mapping(model):
-#     print(model.active_head)
-#     label_2_id_mapping = dict()
-#     id_2_label_mapping = dict()
-#     for i, head in enumerate(model.active_head):
-#         label_2_id_mapping[head] = i
-#         id_2_label_mapping[i] = head
-#     return label_2_id_mapping, id_2_label_mapping
-
-def check_and_update_new_adapter():
+def check_and_update_adapter():
     """If there is difference, then update."""
     global global_adapters_filenames
     global global_all_adapter_names
     update = get_label_adapter_filenames()
-    current_filenames = set(update.values())
-    current_available_adapters_name = set(update.keys())
-
-    new_filenames = current_filenames.difference(set(global_adapters_filenames))
-    removed_filenames = set(global_adapters_filenames).difference(current_filenames)
-
-    if new_filenames or removed_filenames:
-        new_adapter_names = load_adapters(new_filenames)
-        global_all_adapter_names = current_available_adapters_name
-        global_adapters_filenames = list(
-            set(global_adapters_filenames).union(new_filenames).difference(removed_filenames)
-            )
+    new_adapters = []
+    for label_name, filename in update.items():
+        if (label_name not in global_adapters_filenames.keys() or
+            filename not in global_adapters_filenames.values()):
+            global_adapters_filenames[label_name] = filename
+            new_adapters.append(filename)
+    
+    if len(new_adapters) != 0:
+        new_adapter_names = load_adapters(new_adapters)
+        global_all_adapter_names = set(update.keys())
         update_model_active_head(global_all_adapter_names)
+    return True
+
+def have_adapter_version(label_name, adapter_filename):
+    print(label_name, adapter_filename)
+    label = labels_col.find_one(
+        {"label_name": label_name},
+        {"adapter": True})
+    result = filter(lambda x: x["filename"] == adapter_filename,
+                    label["adapter"]["history"])
+    result = list(result)
+    return bool(result)
+
+def check_adapters_version_available(version_map = {}):
+    check_pass = True
+    failed = {}
+    for label_name, adapter_version in version_map.items():
+        if have_adapter_version(label_name, adapter_version) == False:
+            failed[label_name] = adapter_version
+            check_pass = False
+
+    return (check_pass, failed)
+
+def update_global_adapters_filenames(version_dict):
+    for key, value in version_dict.items():
+        global_adapters_filenames[key] = value
 
 def predict(sentence, device = PREDICT_DEVICE):
     global model
