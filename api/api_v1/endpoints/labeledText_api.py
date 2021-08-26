@@ -154,7 +154,9 @@ class update_data_body(BaseModel):
 from utils.tokenizer import tokenizer as roberta_tokenizer
 
 @router.post("/data/labeledText", tags = LABEL_API_TAGS, status_code=status.HTTP_200_OK)
-async def update_labeled_data(response: Response, data: update_data_body, refreash_trainer=False):
+async def update_labeled_data(response: Response,
+                              data: update_data_body,
+                              refreash_trainer: bool = False):
     sentences = []
     current_sentence = []
     # Split the texts by dot. 

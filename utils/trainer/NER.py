@@ -74,7 +74,9 @@ def get_training_dataframe(train_data_search_filter = {}, cache = True):
     # Cache
     final_df["cache_labels"] = final_df["labels"].swifter.progress_bar(False).apply(lambda x: "|".join(x))
     final_df.to_csv(NER_TRAINER_DATA_CATCH_FILE, index=False,
-                    columns = df_columns - ["labels"] + ["cache_labels"])
+                    columns = list(
+                        set(df_columns).union(["cache_labels"]).difference(["labels"])
+                    ))
     del final_df["cache_labels"]
     config_col.update_one({
         "name": NER_ADAPTERS_TRAINER_NAME

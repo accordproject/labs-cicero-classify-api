@@ -167,6 +167,7 @@ def main():
             training_queue = list(training_queue)
 
             if len(training_queue) == 0:
+                import sys
                 sys.exit(0)
 
             # Old Train First
@@ -250,6 +251,7 @@ def main():
                     label_index = trainset.label_map[label_name]
                     for i, data in enumerate(trainloader):
                         loss = train_model_with_auto_adjust_batch(model, i, data, now_is_training, label_index)
+                        torch.cuda.empty_cache()
                         if i % 10 == 0:
                             # with threading to push log onto db, cost: 0:01:43.776396 per 100 iteration.
                             # without threading to push log onto db, cost: 0:01:43.495900 per 100 iteration.
@@ -263,13 +265,14 @@ def main():
                 model.save_adapter(f"{NER_ADAPTERS_PATH}/save_adapters/{filename}", model.active_adapters[0])
                 model.save_head(f"{NER_ADAPTERS_PATH}/save_heads/{filename}", model.active_head)
             except Exception as error:
-                trainer_log(error.args[0])
-                queue_task_log(now_is_training["_id"], log_msg)
-                if "CUDA out of memory" in error.args[0]:
-                    print(error.args[0])
-                    sys.exit(4)
-                else:
-                    raise error
+                import traceback
+                import sys
+                exc_type, exc_value, exc_tb = sys.exc_info()
+                result = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
+                print(result)
+                trainer_log(result)
+                queue_task_log(now_is_training["_id"], result)
+                raise error
 
             training_job_col.update_one({
                     "_id": now_is_training["_id"],
@@ -294,9 +297,17 @@ def main():
                         "trainer_job_id": str(now_is_training["_id"]),
                     }}})
     except KeyboardInterrupt:
+        import sys
         sys.exit(1)
-    except Exception as e:
-        print(e)
+    except Exception as error:
+        import traceback
+        import sys
+        exc_type, exc_value, exc_tb = sys.exc_info()
+        result = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
+        print(result)
+        trainer_log(result)
+        queue_task_log(now_is_training["_id"], result)
+        raise error
 
 if __name__ == "__main__":
     main()

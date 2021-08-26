@@ -16,8 +16,7 @@ client = pymongo.MongoClient(MONGODB_URL)
 from utils.logs import config_log, change_service_status
 
 config_col = client[DATABASE_NAME][CONFIG_COLLECTION]
-
-
+training_job_col = client[DATABASE_NAME][LABEL_TRAIN_JOB_COLLECTION]
 
 trainer = config_col.find_one({"name": NER_ADAPTERS_TRAINER_NAME})
 
@@ -90,23 +89,27 @@ def run_trainer():
     print(f"Stop {NER_ADAPTERS_TRAINER_NAME} because {return_status}")
     return return_status
 
-training_job_col = client[DATABASE_NAME][LABEL_TRAIN_JOB_COLLECTION]
-while True:
-    try:
-        import re
-        result = training_job_col.find({
-            "status":  re.compile("(training|waiting)")
-        })
 
-        result = list(result)
+def main():
+    while True:
+        try:
+            import re
+            result = training_job_col.find({
+                "status":  re.compile("(training|waiting)")
+            })
 
-        if result:
-            return_status = run_trainer()
-            if return_status == "KeyboardInterrupt":
-                break
-            else:
-                continue
-        time.sleep(SLEEP_INTERVAL_SECOND)
-    except KeyboardInterrupt:
-        print("NER Trainer Runner Stop!")
-        break
+            result = list(result)
+
+            if result:
+                return_status = run_trainer()
+                if return_status == "KeyboardInterrupt":
+                    break
+                else:
+                    continue
+            time.sleep(SLEEP_INTERVAL_SECOND)
+        except KeyboardInterrupt:
+            print("NER Trainer Runner Stop!")
+            break
+
+if __name__ == "__main__":
+    main()
