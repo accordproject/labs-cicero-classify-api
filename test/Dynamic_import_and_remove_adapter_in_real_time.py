@@ -9,7 +9,7 @@ def test_adapter_available(target_label):
     status = requests.get(f"http://{API_HOST}:{API_PORT}/api/v1/models/NER/labelText")
     status = status.json()
     assert target_label["label_name"] in status["label"]
-    assert target_label["adapter"]["lastest_filename"] in status["version"]
+    assert target_label["adapter"]["current_filename"] in status["version"]
     return True
 
 def test_prediction_work_with_specific_label_then_return_predict_confidence(target_label):
@@ -31,7 +31,7 @@ def test_adapter_unavailable(target_label):
     status = requests.get(f"http://{API_HOST}:{API_PORT}/api/v1/models/NER/labelText")
     status = status.json()
     assert target_label["label_name"] not in status["label"]
-    assert target_label["adapter"]["lastest_filename"] not in status["version"]
+    assert target_label["adapter"]["current_filename"] not in status["version"]
     return True
 
 def test_prediction_cant_work_with_unknown_label(target_label):
@@ -53,7 +53,7 @@ label_col = client[DATABASE_NAME][LABEL_COLLECTION]
 
 # Find an label which it's adapter filename is not empty.
 target_label = label_col.find_one({
-    "adapter.lastest_filename": re.compile("^(?!\s*$).+"),
+    "adapter.current_filename": re.compile("^(?!\s*$).+"),
     "$where": "this.adapter.history.length > 1",
 })
 
@@ -66,13 +66,13 @@ try:
         "_id": target_label["_id"]
     }, {
         "$set": {
-            "adapter.lastest_filename": ""
+            "adapter.current_filename": ""
         }
     })
     test_adapter_unavailable(target_label)
     test_prediction_cant_work_with_unknown_label(target_label)
     for history in target_label["adapter"]["history"]:
-        if history["filename"] != target_label["adapter"]["lastest_filename"]:
+        if history["filename"] != target_label["adapter"]["current_filename"]:
             break
     
 
@@ -80,7 +80,7 @@ try:
         "_id": target_label["_id"]
     }, {
         "$set": {
-            "adapter.lastest_filename": history["filename"]
+            "adapter.current_filename": history["filename"]
         }
     })
     
@@ -96,7 +96,7 @@ finally:
         "_id": target_label["_id"]
     }, {
         "$set": {
-            "adapter.lastest_filename": origin_target_label["adapter"]["lastest_filename"]
+            "adapter.current_filename": origin_target_label["adapter"]["current_filename"]
         }
     })
 

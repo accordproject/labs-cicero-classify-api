@@ -290,7 +290,7 @@ try:
         now_time = datetime.datetime.now()
         label_define_col.update_one(
             {"label_name": label_name},
-            {"$set": {"adapter.lastest_filename": f"{label_name}_epoch_{Epoch_Times}_{dateStamp}",
+            {"$set": {"adapter.current_filename": f"{label_name}_epoch_{Epoch_Times}_{dateStamp}",
                       "adapter.training_status": "done",
                       "adapter.update_time": now_time,
                 },

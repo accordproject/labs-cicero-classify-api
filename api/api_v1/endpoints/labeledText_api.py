@@ -63,7 +63,7 @@ async def define_new_label(response: Response, data: create_new_label_body):
             "comment": data.comment,
             "tags": data.tags,
             "adapter": {
-                "lastest_filename": "",
+                "current_filename": "",
                 "training_status": "",
                 "history": [],
                 "update_time": datetime.now(),

@@ -131,7 +131,7 @@ async def specify_NER_labelText_model_version(response: Response, data: specify_
     result = await col.update_one(
         {"label_name": data.label_name},
         {"$set": {
-            "adapter.lastest_filename": data.model_version
+            "adapter.current_filename": data.model_version
         }})
     if result.modified_count:
         response.status_code = status.HTTP_200_OK

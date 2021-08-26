@@ -57,8 +57,8 @@ def get_label_adapter_filenames():
     labels = labels_col.find()
     labels = list(labels)
     for label in labels:
-        if label["adapter"]["lastest_filename"]:
-            filename = label["adapter"]["lastest_filename"]
+        if label["adapter"]["current_filename"]:
+            filename = label["adapter"]["current_filename"]
             if check_adapter_filename_valid(filename) == False:
                 while len(label["adapter"]["history"]) > 0:
                     hisotry_adapter = label["adapter"]["history"].pop(-1)

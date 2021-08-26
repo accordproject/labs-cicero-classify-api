@@ -189,22 +189,34 @@ def main():
             trainer_log(log_msg)
             queue_task_log(now_is_training["_id"], log_msg)
 
+            label_define_col = client[DATABASE_NAME][LABEL_COLLECTION]
+            label_define_col.update_one(
+                {"label_name": label_name},
+                {"$set": {
+                    "adapter.training_status": "training",
+                    }
+                })
+            now_is_training_label_defined = label_define_col.find_one({"label_name": label_name})
             training_job_col.update_one({
                     "_id": now_is_training["_id"],
                 },{
                     "$set": {
                         "status": "training",
-                        "train_data_count": len(trainset)
+                        "train_data_count": len(trainset),
+                        "positive_label": trainset.positive_label,
+                        "label_snapsnot": {
+                            "_id": str(now_is_training_label_defined["_id"]),
+                            "user": now_is_training_label_defined["user"],
+                            "label_name": now_is_training_label_defined["label_name"],
+                            "inherit": now_is_training_label_defined["inherit"],
+                            "alias_as": now_is_training_label_defined["alias_as"],
+                            "comment": now_is_training_label_defined["comment"],
+                            "tags": now_is_training_label_defined["tags"],
+                        }
                     }
                 })
 
-            label_define_col = client[DATABASE_NAME][LABEL_COLLECTION]
-            label_define_col.update_one(
-                {"label_name": label_name},
-                {"$set": {
-                    "adapter.training_status": "training new one",
-                    }
-                })
+            
 
             trainloader = DataLoader(trainset, batch_size=NER_TRAIN_BATCH_SIZE, 
                                     collate_fn=create_mini_batch)
@@ -251,7 +263,6 @@ def main():
                     label_index = trainset.label_map[label_name]
                     for i, data in enumerate(trainloader):
                         loss = train_model_with_auto_adjust_batch(model, i, data, now_is_training, label_index)
-                        torch.cuda.empty_cache()
                         if i % 10 == 0:
                             # with threading to push log onto db, cost: 0:01:43.776396 per 100 iteration.
                             # without threading to push log onto db, cost: 0:01:43.495900 per 100 iteration.
@@ -287,7 +298,7 @@ def main():
             now_time = datetime.datetime.now()
             label_define_col.update_one(
                 {"label_name": label_name},
-                {"$set": {"adapter.lastest_filename": f"{label_name}_epoch_{Epoch_Times}_{dateStamp}",
+                {"$set": {"adapter.current_filename": f"{label_name}_epoch_{Epoch_Times}_{dateStamp}",
                         "adapter.training_status": "done",
                         "adapter.update_time": now_time,
                     },

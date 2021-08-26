@@ -88,7 +88,7 @@ def get_training_dataframe(train_data_search_filter = {}, cache = True):
     })
     return final_df
 
-def get_training_data_by_df_according_to_label_name(df, label_name):
+def get_training_label_ane_data_by_df_according_to_label_name_and_alias(df, label_name):
     label_col = client[DATABASE_NAME][LABEL_COLLECTION]
 
     label_info = label_col.find_one({"label_name": label_name})
@@ -99,10 +99,10 @@ def get_training_data_by_df_according_to_label_name(df, label_name):
         alias.append(alias_label["label_name"])
     alias = alias + label_info["inherit"]
 
-    wanted_label = [label_name] + alias
+    positive_label = [label_name] + alias
 
     def label_data(label):
-        if set(label).intersection(set(wanted_label)):
+        if set(label).intersection(set(positive_label)):
             return label_name
         else:
             return DUMMY_LABEL_NAME
@@ -111,14 +111,15 @@ def get_training_data_by_df_according_to_label_name(df, label_name):
 
     sentences = df.groupby("Sentence #")["token"].apply(list).values
     tags = df.groupby("Sentence #")[label_name].apply(list).values
-    return sentences, tags
+    return positive_label, sentences, tags
 
 class NER_Dataset_for_Adapter(Dataset):
     def __init__(self, tokenizer, df, label_name):
         self.label_name = label_name
         self.mode = "train"
         
-        self.sentences, self.tags = get_training_data_by_df_according_to_label_name(df, label_name)
+        self.positive_label, self.sentences, self.tags \
+            = get_training_label_ane_data_by_df_according_to_label_name_and_alias(df, label_name)
         self.len = len(self.sentences)
 
         labels = [DUMMY_LABEL_NAME, label_name]
