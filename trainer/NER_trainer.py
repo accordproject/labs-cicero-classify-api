@@ -15,7 +15,8 @@ from core.config import (
     NER_TRAIN_BATCH_SIZE,
     NER_TRAIN_DEFAULT_FILTER,
     NER_TRAIN_DEVIDE_ID,
-    NER_ADAPTERS_PATH
+    PATH,
+    NER_ADAPTERS_PATH,
 )
 from torch.utils.data import Dataset
 from sklearn.preprocessing import OneHotEncoder
@@ -30,10 +31,10 @@ import os
 # When Each Train
 # Run When Set Up
 update_pid(NER_ADAPTERS_TRAINER_NAME, os.getpid())
-if os.path.isdir(f"{NER_ADAPTERS_PATH}/save_adapters") == False:
-    os.mkdir(f"{NER_ADAPTERS_PATH}/save_adapters")
-if os.path.isdir(f"{NER_ADAPTERS_PATH}/save_heads") == False:
-    os.mkdir(f"{NER_ADAPTERS_PATH}/save_heads")
+if os.path.isdir(f"{PATH}/{NER_ADAPTERS_PATH}/save_adapters") == False:
+    os.mkdir(f"{PATH}/{NER_ADAPTERS_PATH}/save_adapters")
+if os.path.isdir(f"{PATH}/{NER_ADAPTERS_PATH}/save_heads") == False:
+    os.mkdir(f"{PATH}/{NER_ADAPTERS_PATH}/save_heads")
 
 
 

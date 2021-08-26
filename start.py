@@ -10,24 +10,23 @@ slient_commands = [
 ]
     
 commands = [
-    f"""cd {PATH};eval "$(conda shell.bash hook)";conda activate {ANACONDA_ENV_NAME};python NER_trainer_runner.py;""",
-    #f"""cd {PATH};eval "$(conda shell.bash hook)";conda activate {ANACONDA_ENV_NAME};uvicorn app:app --port {API_PORT} --host {API_HOST} --workers {API_WORKER};""",
+    f"""cd {PATH};
+    eval "$(conda shell.bash hook)";
+    conda activate {ANACONDA_ENV_NAME};python trainer/NER_trainer_runner.py;""",
+
+    f"""cd {PATH};eval "$(conda shell.bash hook)";conda activate {ANACONDA_ENV_NAME};uvicorn app:app --port {API_PORT} --host {API_HOST} --workers {API_WORKER};""",
 ]
-
-#if DEBUG:
-#    pass
-
 
 processes = []
 
 for command in slient_commands:
-    print(command)
+    print(command, end = "\n---\n")
     process = subprocess.Popen(command, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
     processes.append(process)
 
 
 for command in commands:
-    print(command)
+    print(command, end = "\n---\n")
     process = subprocess.Popen(command, shell=True)
     processes.append(process)
 
