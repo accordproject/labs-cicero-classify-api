@@ -34,7 +34,7 @@ def run_trainer():
     return_status = "Finish."
     command = f"""eval "$(conda shell.bash hook)";
         conda activate {ANACONDA_ENV_NAME};
-        python {PATH}/trainer/NER_trainer.py;"""
+        python {PATH}/trainer/NER_trainer_with_step_detail.py;"""
     config_log(NER_ADAPTERS_TRAINER_NAME, "Start {NER_ADAPTERS_TRAINER_NAME} from runner")
     change_service_status(NER_ADAPTERS_TRAINER_NAME, "up")
     process = subprocess.Popen(command, shell=True)
