@@ -16,7 +16,7 @@ ALLOWED_HOSTS = ["*"]
 
 API_PORT = 13537
 API_HOST = "0.0.0.0"
-API_WORKER = 5
+API_WORKER = 2
 
 DEBUG = False
 
@@ -27,7 +27,8 @@ MONGODB_USERNAME = os.getenv("MONGO_USER", "user")
 MONGODB_PASSWORD = os.getenv("MONGO_PASSWORD", "")
 
 MONGODB_URL = f"mongodb://{MONGODB_USERNAME}:{MONGODB_PASSWORD}@{MONGODB_HOST}:{MONGODB_PORT}"
-        
+
+# DATABASE_NAME you want to use in MongoDB
 DATABASE_NAME = "Accord_Project"
 NER_LABEL_COLLECTION = "labeled_dataset"
 Feedback_Template_Collection = "template_data_feedback"
@@ -40,7 +41,11 @@ SLEEP_INTERVAL_SECOND = 3
 TRAINER_LOG_COLLECTION = "trainer_log"
 
 # NER Trainer
-NER_TRAIN_BATCH_SIZE = 512
+
+# Batch Size depends on your GPU memory. 
+# For 24 VGB, batch size 256 is fine.
+# For 8 VGB or less, batch size 64 is good.
+NER_TRAIN_BATCH_SIZE = 256
 NER_TRAIN_DEFAULT_FILTER = {}
 NER_TRAIN_DEVIDE_ID = 0
 NER_ADAPTERS_PATH = "."

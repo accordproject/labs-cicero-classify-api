@@ -120,6 +120,7 @@ async def get_label_by_name(label_name, response: Response):
 
 class update_data_body(BaseModel):
     user: str = "example@gmail.com"
+    tags: Optional[list] = [""]
     texts: JSONArray = [
         {
             "text": "Eason",
@@ -187,6 +188,7 @@ async def update_labeled_data(response: Response,
                 })
         dataToStore = {
             "user": data.user,
+            "tags": data.tags,
             "text_and_labels": sentence,
             "token_and_labels": token_and_labels,
             "TimeStamp": datetime.now(),
