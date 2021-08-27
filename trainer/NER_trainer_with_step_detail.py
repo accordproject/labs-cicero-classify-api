@@ -63,7 +63,7 @@ def forward_model_with_auto_adjust_batch(i, data):
             optimizer.zero_grad()
             datas.pop(0)
         except Exception as error:
-            if "CUDA out of memory" not in error.args[0]:
+            if "CUDA" not in error.args[0]:
                 raise error
             # del the variables are unnecessary, Python can check automatically.
             # So I comment it in case anyone want to do the same thing here :D
@@ -74,20 +74,22 @@ def forward_model_with_auto_adjust_batch(i, data):
             msg = f"Failed, CUDA out of memory, dividing data from shape {np.array(datas[0][0]).shape}"
             queue_task_log(now_is_training["_id"], msg)
             print(msg)
-            devided_datas = []
-            for d in datas:
-                length = len(d[0])
-                half = int(length/2)
+            length = len(datas[0][0])
+            half = int(length/2)
+            if length != 1:
+                devided_datas = []
+
+                for d in datas:
                 
-                tokens_tensors, segments_tensors, \
-                masks_tensors, labels = d
-                
-                devided_datas.append((tokens_tensors[:half], segments_tensors[:half], \
-                masks_tensors[:half], labels[:half]))
-                
-                devided_datas.append((tokens_tensors[half:], segments_tensors[:half], \
-                masks_tensors[:half], labels[:half]))
-            datas = devided_datas
+                    tokens_tensors, segments_tensors, \
+                    masks_tensors, labels = d
+                    
+                    devided_datas.append((tokens_tensors[:half], segments_tensors[:half], \
+                    masks_tensors[:half], labels[:half]))
+                    
+                    devided_datas.append((tokens_tensors[half:], segments_tensors[:half], \
+                    masks_tensors[:half], labels[:half]))
+                datas = devided_datas
         finally:
             # do empty_cache every run to avoid CUDA OOM,
             # and let other programs can use GPU, too.
@@ -101,7 +103,7 @@ def forward_model_with_auto_adjust_batch(i, data):
 
     if i % 1 == 0: 
         print(f"Iter {i} \tLoss: {loss}\n") #easy to debug
-        print("Preparing Data...")
+        print(f"Iter {i+1} Preparing Data...")
     if i % 10 == 0:
         # with threading to push log onto db, cost: 0:01:43.776396 per 100 iteration.
         # without threading to push log onto db, cost: 0:01:43.495900 per 100 iteration.
@@ -264,17 +266,23 @@ try:
                     forward_model_with_auto_adjust_batch(i, data)
 
                 print(f"{label_name} epoch {epoch} end, this epoch cost {datetime.datetime.now() - start_time}")
-            print("Finish, Saving")
+            dateStamp = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S%z")
             filename = f"{label_name}_epoch_{Epoch_Times}_{dateStamp}"
+            print(f"Finish, Saving {filename}")
             model.save_adapter(f"{NER_ADAPTERS_PATH}/save_adapters/{filename}", model.active_adapters[0])
             model.save_head(f"{NER_ADAPTERS_PATH}/save_heads/{filename}", model.active_head)
         except Exception as error:
             trainer_log(error.args[0])
             queue_task_log(now_is_training["_id"], log_msg)
-            if "CUDA out of memory" in error.args[0]:
+            if "CUDA" in error.args[0]:
                 print(error.args[0])
                 sys.exit(4)
             else:
+                import traceback
+                import sys
+                exc_type, exc_value, exc_tb = sys.exc_info()
+                result = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
+                print(result)
                 raise error
 
         training_job_col.update_one({
@@ -302,5 +310,12 @@ try:
 except KeyboardInterrupt:
     sys.exit(1)
 except Exception as e:
-    print(e)
-sys.exit(1)
+    import traceback
+    import sys
+    exc_type, exc_value, exc_tb = sys.exc_info()
+    result = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
+    print(result)
+    sys.exit(1)
+    # trainer_log(result)
+    # queue_task_log(now_is_training["_id"], result)
+sys.exit(0)

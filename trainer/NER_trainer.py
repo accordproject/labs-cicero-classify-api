@@ -107,7 +107,7 @@ def train_model_with_auto_adjust_batch(model, i, data, now_is_training, label_in
             loss.backward()
             datas.pop(0)
         except Exception as error:
-            if "CUDA out of memory" not in error.args[0]:
+            if "CUDA" not in error.args[0]:
                 raise error
             # del the variables are unnecessary, Python can check automatically.
             # So I comment it in case anyone want to do the same thing here :D
@@ -117,20 +117,20 @@ def train_model_with_auto_adjust_batch(model, i, data, now_is_training, label_in
             # torch.cuda.empty_cache()
             msg = f"Failed, CUDA out of memory, dividing data from shape {np.array(datas[0][0]).shape}"
             queue_task_log(now_is_training["_id"], msg)
-            devided_datas = []
-            for d in datas:
-                length = len(d[0])
-                half = int(length/2)
-                
-                tokens_tensors, segments_tensors, \
-                masks_tensors, labels = d
-                
-                devided_datas.append((tokens_tensors[:half], segments_tensors[:half], \
-                masks_tensors[:half], labels[:half]))
-                
-                devided_datas.append((tokens_tensors[half:], segments_tensors[:half], \
-                masks_tensors[:half], labels[:half]))
-            datas = devided_datas
+            length = len(datas[0][0])
+            half = int(length/2)
+            if length != 1:
+                devided_datas = []
+                for d in datas:
+                    tokens_tensors, segments_tensors, \
+                    masks_tensors, labels = d
+                    
+                    devided_datas.append((tokens_tensors[:half], segments_tensors[:half], \
+                    masks_tensors[:half], labels[:half]))
+                    
+                    devided_datas.append((tokens_tensors[half:], segments_tensors[:half], \
+                    masks_tensors[:half], labels[:half]))
+                datas = devided_datas
         finally:
             # do empty_cache every run to avoid CUDA OOM,
             # and let other programs can use GPU, too.
