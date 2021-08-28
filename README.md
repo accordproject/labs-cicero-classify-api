@@ -1,5 +1,8 @@
 # labs-cicero-classify-api
 
+- [How we design the NER model with Adapter?](./docs/How_we_design_the_NER_model.md).
+- [How Backend Train and Use NER Adapters?](./docs/How_backend_train_and_use_NER_Adapters.md)
+
 # How to host API?
 
 > We strongly suggest hosting the API at the Ubuntu with at least 4 cores, 8GB Ram, and a GPU with more than 8 GB VRAM. Yet you also can host it without GPU or on other systems. Welcome to share your successful installation step on other system here.
