@@ -87,7 +87,6 @@ def train_model_with_auto_adjust_batch(model, i, data, now_is_training, label_in
             # Train
             tokens_tensors, segments_tensors, \
             masks_tensors, labels = [t.to(device) for t in data]
-
             outputs = model(input_ids = tokens_tensors,
                 attention_mask=masks_tensors,
                 token_type_ids=segments_tensors)
@@ -128,7 +127,7 @@ def train_model_with_auto_adjust_batch(model, i, data, now_is_training, label_in
                     devided_datas.append((tokens_tensors[:half], segments_tensors[:half], \
                     masks_tensors[:half], labels[:half]))
                     
-                    devided_datas.append((tokens_tensors[half:], segments_tensors[:half], \
+                    devided_datas.append((tokens_tensors[:half], segments_tensors[:half], \
                     masks_tensors[:half], labels[:half]))
                 datas = devided_datas
         finally:

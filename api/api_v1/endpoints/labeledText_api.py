@@ -178,6 +178,7 @@ async def update_labeled_data(response: Response,
             # New Sentence, New data.
             sentences.append(current_sentence)
             current_sentence = []
+    sentences.append(current_sentence)
     mongo_client = await get_database()
     col = mongo_client[DATABASE_NAME][NER_LABEL_COLLECTION]
     insert_ids = []
