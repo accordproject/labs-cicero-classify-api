@@ -76,7 +76,8 @@ target/
 
 # Jupyter Notebook
 .ipynb_checkpoints
-
+*.ipynb
+# No IPYNB Here
 # IPython
 profile_default/
 ipython_config.py
@@ -145,4 +146,6 @@ cached_*
 *.tar.gz
 
 save_*
-API_Debug/*
+
+# Ignore MongoDB
+.mongoDB
